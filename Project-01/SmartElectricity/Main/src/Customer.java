@@ -1,20 +1,17 @@
-public class Customer {
-    private String customerId;
+public class Customer extends Record {
     private String name;
     private String address;
     private String meterNumber;
 
-    // Constructor - used to create a new Customer object
     public Customer(String customerId, String name, String address, String meterNumber) {
-        this.customerId = customerId;
+        super(customerId); // sends the ID up to Record
         this.name = name;
         this.address = address;
         this.meterNumber = meterNumber;
     }
 
-    // Getters - allow other classes to read the data
     public String getCustomerId() {
-        return customerId;
+        return id;
     }
 
     public String getName() {
@@ -29,7 +26,6 @@ public class Customer {
         return meterNumber;
     }
 
-    // Setters - allow updating data (but NOT customerId, which stays fixed)
     public void setName(String name) {
         this.name = name;
     }
@@ -40,5 +36,20 @@ public class Customer {
 
     public void setMeterNumber(String meterNumber) {
         this.meterNumber = meterNumber;
+    }
+
+    // Polymorphism: Customer's own version of displayInfo
+    @Override
+    public void displayInfo() {
+        System.out.println("Customer ID: " + id);
+        System.out.println("Name: " + name);
+        System.out.println("Address: " + address);
+        System.out.println("Meter Number: " + meterNumber);
+    }
+
+    // Polymorphism: Customer's own version of toFileString
+    @Override
+    public String toFileString() {
+        return id + "," + name + "," + address + "," + meterNumber;
     }
 }

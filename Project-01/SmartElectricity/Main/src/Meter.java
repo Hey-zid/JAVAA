@@ -1,20 +1,17 @@
-public class Meter {
-    private String customerId;
+public class Meter extends Record {
     private String meterNumber;
     private int previousReading;
     private int currentReading;
 
-    // Constructor - used to create a new Meter object
     public Meter(String customerId, String meterNumber, int previousReading, int currentReading) {
-        this.customerId = customerId;
+        super(customerId);
         this.meterNumber = meterNumber;
         this.previousReading = previousReading;
         this.currentReading = currentReading;
     }
 
-    // Getters
     public String getCustomerId() {
-        return customerId;
+        return id;
     }
 
     public String getMeterNumber() {
@@ -29,8 +26,23 @@ public class Meter {
         return currentReading;
     }
 
-    // Calculates units used instead of storing it separately
     public int getUnitsUsed() {
         return currentReading - previousReading;
+    }
+
+    // Polymorphism: Meter's own version of displayInfo
+    @Override
+    public void displayInfo() {
+        System.out.println("Customer ID: " + id);
+        System.out.println("Meter Number: " + meterNumber);
+        System.out.println("Previous Reading: " + previousReading);
+        System.out.println("Current Reading: " + currentReading);
+        System.out.println("Units Used: " + getUnitsUsed());
+    }
+
+    // Polymorphism: Meter's own version of toFileString
+    @Override
+    public String toFileString() {
+        return id + "," + meterNumber + "," + previousReading + "," + currentReading;
     }
 }

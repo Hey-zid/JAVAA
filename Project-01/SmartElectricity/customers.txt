@@ -1,5 +1,5 @@
 1001,Bayazid,Cumilla,M1001
-1002,Mahid,Dhaka,M1002
+1002,Putul,Dhaka,M1002
 1003,Sadiqquzzaman,Dhaka,M1003
 1004,Mahid,Dhaka,M1004
 1005,Samia,Dhaka,M1005

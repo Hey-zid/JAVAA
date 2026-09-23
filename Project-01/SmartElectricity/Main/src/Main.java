@@ -1,244 +1,307 @@
+import javax.swing.*;
+import java.awt.*;
 import java.util.List;
-import java.util.Scanner;
 
-public class Main {
-    private static final double RATE_PER_UNIT = 5.0; // Taka per unit - change here if rate changes
+public class Main extends JFrame {
+    private final FileManager fileManager = new FileManager();
+    private static final double RATE_PER_UNIT = 5.0;
+
+    public Main() {
+        setTitle("Electricity Management System");
+        setSize(650, 500);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Customer", buildCustomerPanel());
+        tabs.addTab("Meter Reading", buildMeterPanel());
+        tabs.addTab("Monthly Bill", buildBillPanel());
+        tabs.addTab("Annual Report", buildReportPanel());
+
+        add(tabs);
+    }
+
+    // ================= CUSTOMER TAB =================
+
+    private JPanel buildCustomerPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new GridLayout(4, 2, 5, 5));
+        JTextField idField = new JTextField();
+        JTextField nameField = new JTextField();
+        JTextField addressField = new JTextField();
+        JTextField meterField = new JTextField();
+
+        form.add(new JLabel("Customer ID:"));
+        form.add(idField);
+        form.add(new JLabel("Name:"));
+        form.add(nameField);
+        form.add(new JLabel("Address:"));
+        form.add(addressField);
+        form.add(new JLabel("Meter Number:"));
+        form.add(meterField);
+
+        JTextArea output = new JTextArea(8, 40);
+        output.setEditable(false);
+
+        JPanel buttons = new JPanel();
+        JButton registerBtn = new JButton("Register");
+        JButton searchBtn = new JButton("Search");
+        JButton updateBtn = new JButton("Update");
+        JButton deleteBtn = new JButton("Delete");
+        buttons.add(registerBtn);
+        buttons.add(searchBtn);
+        buttons.add(updateBtn);
+        buttons.add(deleteBtn);
+
+        registerBtn.addActionListener(e -> {
+            try {
+                Customer c = new Customer(idField.getText(), nameField.getText(),
+                        addressField.getText(), meterField.getText());
+                fileManager.saveCustomer(c);
+                output.setText("Customer registered successfully!");
+            } catch (FileManager.DuplicateCustomerException ex) {
+                output.setText(ex.getMessage());
+            }
+        });
+
+        searchBtn.addActionListener(e -> {
+            Customer c = fileManager.findCustomerById(idField.getText());
+            if (c == null) {
+                output.setText("Customer not found.");
+            } else {
+                nameField.setText(c.getName());
+                addressField.setText(c.getAddress());
+                meterField.setText(c.getMeterNumber());
+                output.setText("Customer found:\n" + c.toFileString());
+            }
+        });
+
+        updateBtn.addActionListener(e -> {
+            try {
+                Customer c = new Customer(idField.getText(), nameField.getText(),
+                        addressField.getText(), meterField.getText());
+                fileManager.updateCustomer(c);
+                output.setText("Customer updated successfully!");
+            } catch (FileManager.CustomerNotFoundException ex) {
+                output.setText(ex.getMessage());
+            }
+        });
+
+        deleteBtn.addActionListener(e -> {
+            try {
+                fileManager.deleteCustomer(idField.getText());
+                output.setText("Customer and their records deleted.");
+            } catch (FileManager.CustomerNotFoundException ex) {
+                output.setText(ex.getMessage());
+            }
+        });
+
+        panel.add(form, BorderLayout.NORTH);
+        panel.add(new JScrollPane(output), BorderLayout.CENTER);
+        panel.add(buttons, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    // ================= METER TAB =================
+
+    private JPanel buildMeterPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new GridLayout(2, 2, 5, 5));
+        JTextField idField = new JTextField();
+        JTextField currentField = new JTextField();
+
+        form.add(new JLabel("Customer ID:"));
+        form.add(idField);
+        form.add(new JLabel("Current Reading:"));
+        form.add(currentField);
+
+        JTextArea output = new JTextArea(8, 40);
+        output.setEditable(false);
+
+        JButton addBtn = new JButton("Add Meter Reading");
+        addBtn.addActionListener(e -> {
+            Customer customer = fileManager.findCustomerById(idField.getText());
+            if (customer == null) {
+                output.setText("Error: Customer does not exist.");
+                return;
+            }
+
+            try {
+                int currentReading = Integer.parseInt(currentField.getText());
+                Meter lastMeter = fileManager.findMeterByCustomerId(idField.getText());
+                int previousReading = (lastMeter == null) ? 0 : lastMeter.getCurrentReading();
+
+                if (currentReading < previousReading) {
+                    output.setText("Error: Current reading cannot be less than previous reading (" + previousReading + ").");
+                    return;
+                }
+
+                Meter meter = new Meter(idField.getText(), customer.getMeterNumber(), previousReading, currentReading);
+                fileManager.saveMeter(meter);
+                output.setText("Reading saved!\nPrevious: " + previousReading +
+                        "\nCurrent: " + currentReading +
+                        "\nUnits Used: " + meter.getUnitsUsed());
+            } catch (NumberFormatException ex) {
+                output.setText("Error: Please enter a valid number for the reading.");
+            }
+        });
+
+        panel.add(form, BorderLayout.NORTH);
+        panel.add(new JScrollPane(output), BorderLayout.CENTER);
+        panel.add(addBtn, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    // ================= BILL TAB =================
+
+    private JPanel buildBillPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new GridLayout(3, 2, 5, 5));
+        JTextField idField = new JTextField();
+        JTextField monthField = new JTextField();
+        JTextField statusField = new JTextField();
+
+        form.add(new JLabel("Customer ID:"));
+        form.add(idField);
+        form.add(new JLabel("Month:"));
+        form.add(monthField);
+        form.add(new JLabel("Status (Paid/Unpaid):"));
+        form.add(statusField);
+
+        JTextArea output = new JTextArea(8, 40);
+        output.setEditable(false);
+
+        JPanel buttons = new JPanel();
+        JButton addBtn = new JButton("Add Bill");
+        JButton updateBtn = new JButton("Update Status");
+        JButton deleteBtn = new JButton("Delete Bill");
+        buttons.add(addBtn);
+        buttons.add(updateBtn);
+        buttons.add(deleteBtn);
+
+        addBtn.addActionListener(e -> {
+            Customer customer = fileManager.findCustomerById(idField.getText());
+            if (customer == null) {
+                output.setText("Error: Customer does not exist.");
+                return;
+            }
+
+            Meter meter = fileManager.findNextUnbilledMeter(idField.getText());
+            if (meter == null) {
+                output.setText("Error: No unbilled meter reading found.");
+                return;
+            }
+
+            String status = statusField.getText();
+            if (!status.equalsIgnoreCase("Paid") && !status.equalsIgnoreCase("Unpaid")) {
+                output.setText("Error: Status must be 'Paid' or 'Unpaid'.");
+                return;
+            }
+
+            Bill bill = new Bill(idField.getText(), monthField.getText(),
+                    meter.getUnitsUsed(), meter.getCurrentReading(), status);
+            fileManager.saveBill(bill);
+
+            double cost = bill.getUnitsUsed() * RATE_PER_UNIT;
+            output.setText("Bill created!\nUnits: " + bill.getUnitsUsed() +
+                    "\nReading: " + bill.getReading() +
+                    "\nAmount: " + cost + " Taka" +
+                    "\nStatus: " + bill.getStatus());
+        });
+
+        updateBtn.addActionListener(e -> {
+            String status = statusField.getText();
+            if (!status.equalsIgnoreCase("Paid") && !status.equalsIgnoreCase("Unpaid")) {
+                output.setText("Error: Status must be 'Paid' or 'Unpaid'.");
+                return;
+            }
+            boolean success = fileManager.updateBillStatus(idField.getText(), monthField.getText(), status);
+            output.setText(success ? "Bill status updated." : "Error: Bill not found.");
+        });
+
+        deleteBtn.addActionListener(e -> {
+            boolean success = fileManager.deleteBill(idField.getText(), monthField.getText());
+            output.setText(success ? "Bill deleted." : "Error: Bill not found.");
+        });
+
+        panel.add(form, BorderLayout.NORTH);
+        panel.add(new JScrollPane(output), BorderLayout.CENTER);
+        panel.add(buttons, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    // ================= REPORT TAB =================
+
+    private JPanel buildReportPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new FlowLayout());
+        JTextField idField = new JTextField(15);
+        JButton generateBtn = new JButton("Generate Annual Report");
+        form.add(new JLabel("Customer ID:"));
+        form.add(idField);
+        form.add(generateBtn);
+
+        JTextArea output = new JTextArea(18, 50);
+        output.setEditable(false);
+        output.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+
+        generateBtn.addActionListener(e -> {
+            Customer customer = fileManager.findCustomerById(idField.getText());
+            if (customer == null) {
+                output.setText("Error: Customer does not exist.");
+                return;
+            }
+
+            List<Bill> bills = fileManager.findBillsByCustomerId(idField.getText());
+            if (bills.isEmpty()) {
+                output.setText("No bills found for this customer yet.");
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("Customer Name: ").append(customer.getName()).append("\n");
+            sb.append("Customer ID: ").append(customer.getCustomerId()).append("\n");
+            sb.append("Address: ").append(customer.getAddress()).append("\n\n");
+            sb.append(String.format("%-15s%-10s%-12s%-12s%-10s%n", "MONTH", "UNITS", "READING", "AMOUNT", "STATUS"));
+
+            int totalUnits = 0, paidCount = 0, unpaidCount = 0;
+            double totalBilled = 0, totalPaid = 0, totalDue = 0;
+
+            for (Bill bill : bills) {
+                double cost = bill.getUnitsUsed() * RATE_PER_UNIT;
+                sb.append(String.format("%-15s%-10d%-12d%-12.2f%-10s%n",
+                        bill.getMonth(), bill.getUnitsUsed(), bill.getReading(), cost, bill.getStatus()));
+
+                totalUnits += bill.getUnitsUsed();
+                totalBilled += cost;
+                if (bill.getStatus().equalsIgnoreCase("Paid")) {
+                    paidCount++;
+                    totalPaid += cost;
+                } else {
+                    unpaidCount++;
+                    totalDue += cost;
+                }
+            }
+
+            sb.append("\nTotal Units: ").append(totalUnits);
+            sb.append("\nPaid Bills: ").append(paidCount).append("   Unpaid Bills: ").append(unpaidCount);
+            sb.append("\nTotal Billed: ").append(totalBilled).append(" Taka");
+            sb.append("\nTotal Paid: ").append(totalPaid).append(" Taka");
+            sb.append("\nTotal Due: ").append(totalDue).append(" Taka");
+
+            output.setText(sb.toString());
+        });
+
+        panel.add(form, BorderLayout.NORTH);
+        panel.add(new JScrollPane(output), BorderLayout.CENTER);
+        return panel;
+    }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        FileManager fileManager = new FileManager();
-        boolean running = true;
-
-        while (running) {
-            System.out.println("\n========================================");
-            System.out.println("       ELECTRICITY MANAGEMENT SYSTEM");
-            System.out.println("========================================");
-            System.out.println("1. Register New Customer");
-            System.out.println("2. Search Customer");
-            System.out.println("3. Add Meter Reading");
-            System.out.println("4. Add Monthly Bill");
-            System.out.println("5. Check Annual Bill");
-            System.out.println("6. Exit");
-            System.out.print("Enter your choice: ");
-
-            String choice = scanner.nextLine();
-
-            switch (choice) {
-                case "1":
-                    registerCustomer(scanner, fileManager);
-                    break;
-                case "2":
-                    searchCustomer(scanner, fileManager);
-                    break;
-                case "3":
-                    addMeterReading(scanner, fileManager);
-                    break;
-                case "4":
-                    addMonthlyBill(scanner, fileManager);
-                    break;
-                case "5":
-                    checkAnnualBill(scanner, fileManager);
-                    break;
-                case "6":
-                    running = false;
-                    System.out.println("Exiting program. Goodbye!");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
-            }
-        }
-
-        scanner.close();
-    }
-
-    private static void registerCustomer(Scanner scanner, FileManager fileManager) {
-        System.out.print("Enter Customer ID: ");
-        String id = scanner.nextLine();
-
-        if (fileManager.isCustomerIdTaken(id)) {
-            System.out.println("Error: Customer ID already exists.");
-            return;
-        }
-
-        System.out.print("Enter Name: ");
-        String name = scanner.nextLine();
-
-        System.out.print("Enter Address: ");
-        String address = scanner.nextLine();
-
-        System.out.print("Enter Meter Number: ");
-        String meterNumber = scanner.nextLine();
-
-        Customer customer = new Customer(id, name, address, meterNumber);
-        fileManager.saveCustomer(customer);
-
-        System.out.println("Customer registered successfully!");
-    }
-
-    private static void searchCustomer(Scanner scanner, FileManager fileManager) {
-        System.out.print("Enter Customer ID: ");
-        String id = scanner.nextLine();
-
-        Customer customer = fileManager.findCustomerById(id);
-
-        if (customer == null) {
-            System.out.println("Customer not found.");
-        } else {
-            System.out.println("\n--- Customer Found ---");
-            System.out.println("Customer ID: " + customer.getCustomerId());
-            System.out.println("Name: " + customer.getName());
-            System.out.println("Address: " + customer.getAddress());
-            System.out.println("Meter Number: " + customer.getMeterNumber());
-        }
-    }
-
-    private static void addMeterReading(Scanner scanner, FileManager fileManager) {
-        System.out.print("Enter Customer ID: ");
-        String id = scanner.nextLine();
-
-        Customer customer = fileManager.findCustomerById(id);
-        if (customer == null) {
-            System.out.println("Error: Customer does not exist. Register the customer first.");
-            return;
-        }
-
-        Meter lastMeter = fileManager.findMeterByCustomerId(id);
-        int previousReading;
-        int currentReading;
-
-        if (lastMeter == null) {
-            System.out.println("No previous reading found. Please enter both readings.");
-
-            System.out.print("Enter Previous Reading: ");
-            previousReading = Integer.parseInt(scanner.nextLine());
-
-            System.out.print("Enter Current Reading: ");
-            currentReading = Integer.parseInt(scanner.nextLine());
-        } else {
-            previousReading = lastMeter.getCurrentReading();
-            System.out.println("Previous Reading (auto-filled from last record): " + previousReading);
-
-            System.out.print("Enter Current Reading: ");
-            currentReading = Integer.parseInt(scanner.nextLine());
-        }
-
-        if (previousReading < 0 || currentReading < 0) {
-            System.out.println("Error: Readings cannot be negative.");
-            return;
-        }
-
-        if (currentReading < previousReading) {
-            System.out.println("Error: Current reading cannot be less than previous reading.");
-            return;
-        }
-
-        Meter meter = new Meter(id, customer.getMeterNumber(), previousReading, currentReading);
-        fileManager.saveMeter(meter);
-
-        System.out.println("Meter reading saved successfully!");
-        System.out.println("Units Used: " + meter.getUnitsUsed());
-    }
-
-    private static void addMonthlyBill(Scanner scanner, FileManager fileManager) {
-        System.out.print("Enter Customer ID: ");
-        String id = scanner.nextLine();
-
-        Customer customer = fileManager.findCustomerById(id);
-        if (customer == null) {
-            System.out.println("Error: Customer does not exist. Register the customer first.");
-            return;
-        }
-
-        Meter meter = fileManager.findNextUnbilledMeter(id);
-        if (meter == null) {
-            System.out.println("Error: No unbilled meter reading found for this customer.");
-            System.out.println("Either no readings exist, or all existing readings already have bills.");
-            return;
-        }
-
-        System.out.print("Enter Month (e.g. January 2026): ");
-        String month = scanner.nextLine();
-
-        System.out.print("Enter Payment Status (Paid/Unpaid): ");
-        String status = scanner.nextLine();
-
-        if (!status.equalsIgnoreCase("Paid") && !status.equalsIgnoreCase("Unpaid")) {
-            System.out.println("Error: Status must be 'Paid' or 'Unpaid'.");
-            return;
-        }
-
-        int unitsUsed = meter.getUnitsUsed();
-        int reading = meter.getCurrentReading();
-
-        Bill bill = new Bill(id, month, unitsUsed, reading, status);
-        fileManager.saveBill(bill);
-
-        double cost = unitsUsed * RATE_PER_UNIT;
-
-        System.out.println("Bill created successfully!");
-        System.out.println("Customer: " + customer.getName());
-        System.out.println("Month: " + bill.getMonth());
-        System.out.println("Units: " + bill.getUnitsUsed());
-        System.out.println("Reading: " + bill.getReading());
-        System.out.println("Amount: " + cost + " Taka");
-        System.out.println("Status: " + bill.getStatus());
-    }
-
-    // Handles displaying the annual bill/usage report for a customer
-    private static void checkAnnualBill(Scanner scanner, FileManager fileManager) {
-        System.out.print("Enter Customer ID: ");
-        String id = scanner.nextLine();
-
-        Customer customer = fileManager.findCustomerById(id);
-        if (customer == null) {
-            System.out.println("Error: Customer does not exist.");
-            return;
-        }
-
-        List<Bill> bills = fileManager.findBillsByCustomerId(id);
-        if (bills.isEmpty()) {
-            System.out.println("No bills found for this customer yet.");
-            return;
-        }
-
-        System.out.println("\nCustomer Name: " + customer.getName());
-        System.out.println("Customer ID: " + customer.getCustomerId());
-        System.out.println("Address: " + customer.getAddress());
-        System.out.println("Meter Number: " + customer.getMeterNumber());
-        System.out.println();
-        System.out.printf("%-18s%-10s%-12s%-12s%-10s%n", "MONTH", "UNITS", "READING", "AMOUNT", "STATUS");
-
-        int totalUnits = 0;
-        int paidCount = 0;
-        int unpaidCount = 0;
-        double totalBilled = 0;
-        double totalPaid = 0;
-        double totalDue = 0;
-
-        for (Bill bill : bills) {
-            double cost = bill.getUnitsUsed() * RATE_PER_UNIT;
-
-            System.out.printf("%-18s%-10d%-12d%-12.2f%-10s%n",
-                    bill.getMonth(), bill.getUnitsUsed(), bill.getReading(), cost, bill.getStatus());
-
-            totalUnits += bill.getUnitsUsed();
-            totalBilled += cost;
-
-            if (bill.getStatus().equalsIgnoreCase("Paid")) {
-                paidCount++;
-                totalPaid += cost;
-            } else {
-                unpaidCount++;
-                totalDue += cost;
-            }
-        }
-
-        System.out.println();
-        System.out.println("Total Annual Units: " + totalUnits);
-        System.out.println("Paid Bills: " + paidCount);
-        System.out.println("Unpaid Bills: " + unpaidCount);
-        System.out.println("Total Billed Amount: " + totalBilled + " Taka");
-        System.out.println("Total Amount Paid: " + totalPaid + " Taka");
-        System.out.println("Total Amount Due: " + totalDue + " Taka");
+        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
     }
 }

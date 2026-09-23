@@ -1,22 +1,19 @@
-public class Bill {
-    private String customerId;
+public class Bill extends Record {
     private String month;
     private int unitsUsed;
     private int reading;
-    private String status; // "Paid" or "Unpaid"
+    private String status;
 
-    // Constructor - used to create a new Bill object
     public Bill(String customerId, String month, int unitsUsed, int reading, String status) {
-        this.customerId = customerId;
+        super(customerId);
         this.month = month;
         this.unitsUsed = unitsUsed;
         this.reading = reading;
         this.status = status;
     }
 
-    // Getters
     public String getCustomerId() {
-        return customerId;
+        return id;
     }
 
     public String getMonth() {
@@ -35,8 +32,23 @@ public class Bill {
         return status;
     }
 
-    // Setter - only status is allowed to change after creation
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    // Polymorphism: Bill's own version of displayInfo
+    @Override
+    public void displayInfo() {
+        System.out.println("Customer ID: " + id);
+        System.out.println("Month: " + month);
+        System.out.println("Units Used: " + unitsUsed);
+        System.out.println("Reading: " + reading);
+        System.out.println("Status: " + status);
+    }
+
+    // Polymorphism: Bill's own version of toFileString
+    @Override
+    public String toFileString() {
+        return id + "," + month + "," + unitsUsed + "," + reading + "," + status;
     }
 }
